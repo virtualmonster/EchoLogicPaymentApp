@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoLogic — Payments application</title>
+  <meta name="description" content="EchoLogicFinance: A payments demo app for IBm DevOps Loop demos." />
+  <meta name="color-scheme" content="light dark">
+  <style>
+    /* =============================================================
+       EchoLogicFinance — Payments
+       Tested in Safari, Firefox and Chrome.
+       This app contains HTML, CSS, and JavaScript
+       It also uses an API to get currency exchange rates: Frankfurter API (ECB FX rates)
+       ============================================================= */
+
+    /* ===== THEME TOKENS ======================================== */
+    :root {
+      --accent: #2563eb;               /* change to #a855f7 or #16a34a for instant theme tweak */
+      --accent-strong: #1e40af;
+      --bg: #0a0f1e;
+      --surface-1: #0f172a;            /* cards */
+      --surface-2: #0b1224;            /* header / sticky */
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --ring: rgba(37,99,235,.45);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow-1: 0 1px 2px rgba(0,0,0,.25), 0 10px 30px rgba(0,0,0,.25);
+      --shadow-2: 0 1px 2px rgba(0,0,0,.2), 0 20px 60px rgba(0,0,0,.35);
+      --gap: 18px;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f8fb;
+        --surface-1: #ffffff;
+        --surface-2: rgba(255,255,255,.9);
+        --text: #0f172a;
+        --muted: #475569;
+        --ring: rgba(37,99,235,.35);
+        --shadow-1: 0 1px 2px rgba(0,0,0,.06), 0 12px 30px rgba(15,23,42,.08);
+        --shadow-2: 0 10px 40px rgba(15,23,42,.12);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+
+    /* ===== Base ================================================= */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font: 15px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell,
+            Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background:
+        radial-gradient(1000px 500px at 10% -10%, rgba(37,99,235,.18), transparent),
+        radial-gradient(900px 500px at 110% 0%, rgba(168,85,247,.12), transparent),
+        var(--bg);
+      color: var(--text);
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
+
+    .container { max-width: 1280px; margin: 0 auto; padding: clamp(16px, 4vw, 28px); }
+
+    /* ===== App Header (clean + sticky) ========================= */
+    header.appbar {
+      position: sticky; top: 0; z-index: 50;
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+      padding: 12px 16px; border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--surface-2), rgba(17,24,39,0.6));
+      box-shadow: var(--shadow-1);
+      border: 1px solid rgba(255,255,255,0.06);
+      backdrop-filter: saturate(140%) blur(6px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 40px; height: 40px; border-radius: 12px; background:
+      conic-gradient(from 180deg at 50% 50%, var(--accent), var(--accent-strong), var(--accent));
+      position: relative; box-shadow: inset 0 0 8px rgba(255,255,255,.18), 0 8px 24px rgba(37,99,235,.35);
+    }
+    .logo::after { content: ""; position: absolute; inset: 6px; border-radius: 8px; background: rgba(255,255,255,.14); }
+    h1 { font-size: clamp(18px, 2vw, 22px); margin: 0; letter-spacing: .2px; }
+    .tagline { color: var(--muted); font-size: 13px; margin: 2px 0 0 0; }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-self: end; }
+    .chip {
+      border: 1px solid rgba(37,99,235,.28);
+      background: linear-gradient(180deg, rgba(37,99,235,.14), rgba(37,99,235,.06));
+      color: var(--text); padding: 6px 10px; border-radius: 999px; font-weight: 600; font-size: 12px;
+    }
+
+    /* ===== Cards & layout ===================================== */
+    main { margin-top: 18px; display: grid; gap: var(--gap); }
+    .grid { display: grid; gap: var(--gap); grid-template-columns: repeat(12, 1fr); }
+    .card {
+      grid-column: span 12;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), transparent), var(--surface-1);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--radius); padding: 16px clamp(14px, 3vw, 18px);
+      box-shadow: var(--shadow-1);
+    }
+    .card h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: .2px; }
+    .card p { margin: 0 0 10px; color: var(--muted); }
+
+    @media (min-width: 720px) {
+      .span-8 { grid-column: span 8; }
+      .span-7 { grid-column: span 7; }
+      .span-6 { grid-column: span 6; }
+      .span-5 { grid-column: span 5; }
+      .span-4 { grid-column: span 4; }
+      .span-3 { grid-column: span 3; }
+    }
+      .span-5 { grid-column: span 5; }
+      .span-6 { grid-column: span 6; }
+      .span-4 { grid-column: span 4; }
+      .span-3 { grid-column: span 3; }
+    }
+
+    /* ===== Controls (clean inputs) ============================= */
+    .controls { display: grid; gap: 12px; }
+    .row { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 680px) { .row { grid-template-columns: 1fr 1fr; } }
+
+    label { font-weight: 700; font-size: 13px; color: var(--text); }
+    select, input, button, output, textarea {
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      color: var(--text);
+      padding: 12px 12px; border-radius: var(--radius-sm);
+      font-size: 14px; line-height: 1.25;
+      transition: box-shadow .2s ease, border-color .2s ease, transform .06s ease;
+    }
+    ::placeholder { color: color-mix(in oklab, var(--muted) 84%, transparent); }
+    select:hover, input:hover, textarea:hover { border-color: rgba(255,255,255,.25); }
+    select:focus, input:focus, textarea:focus { box-shadow: 0 0 0 4px var(--ring); border-color: transparent; }
+
+    .btn { background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; font-weight: 800; cursor: pointer; box-shadow: 0 8px 22px rgba(37,99,235,.35); }
+    .btn:hover { filter: brightness(1.03); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-ghost { background: transparent; border: 1px dashed rgba(255,255,255,.28); }
+    .btn-danger { background: linear-gradient(135deg, var(--danger), #b91c1c); border: none; box-shadow: 0 8px 22px rgba(239,68,68,.35); }
+
+    /* ===== Banner ============================================== */
+    .promo { display: none; border: 1px solid rgba(255,255,255,.2);
+      background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(59,130,246,.16));
+      color: var(--text); padding: 12px 14px; border-radius: 12px; box-shadow: var(--shadow-1); animation: slideIn .4s ease both; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ===== Legend, pills & badges =============================== */
+    .legend { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); }
+    .badge { padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; letter-spacing: .2px; display: inline-block; }
+    .status-paid { background: color-mix(in oklab, var(--success) 20%, transparent); border: 1px solid color-mix(in oklab, var(--success) 55%, transparent); }
+    .status-scheduled { background: color-mix(in oklab, var(--warning) 20%, transparent); border: 1px solid color-mix(in oklab, var(--warning) 55%, transparent); }
+    .status-cancelled { background: color-mix(in oklab, var(--danger) 20%, transparent); border: 1px solid color-mix(in oklab, var(--danger) 55%, transparent); }
+
+    /* ===== Table: sticky header, zebra ========================== */
+    table { width: 100%; border-collapse: collapse; }
+    thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-1);
+               border-bottom: 1px solid rgba(255,255,255,.16); box-shadow: 0 6px 12px rgba(0,0,0,.08); }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.08); }
+    th { color: var(--muted); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+    tbody tr:nth-child(even) td { background: rgba(255,255,255,.03); }
+    tbody tr:hover td { background: rgba(255,255,255,.06); }
+
+    /* ===== Sparkline =========================================== */
+    .sparkline { width: 100%; height: 76px; display: block; }
+
+    /* ===== Footer & a11y ======================================= */
+    footer { margin: 26px 0; color: var(--muted); font-size: 13px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .status { margin-top: 8px; font-size: 13px; }
+    .status.ok { color: var(--success); }
+    .status.warn { color: var(--warning); }
+    .status.err { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="appbar" role="banner" aria-label="EchoLogicFinance header">
+      <div class="brand" aria-label="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1 id="appTitle">EchoLogic Payments</h1>
+          <p id="appTagline" class="tagline">A payment services application demo.</p>
+        </div>
+      </div>
+      <div></div>
+      <div class="chips">
+        <div class="chip" id="versionBadge" aria-label="version">v2.0.0</div>
+        <div class="chip" id="acctBadge" aria-label="account-currency">Account: GBP</div>
+      </div>
+    </header>
+
+    <main id="main" role="main">
+      <section class="card promo" id="promoBanner" aria-live="polite">
+        <strong>New:</strong> Scheduled payments and multi‑currency ledger are now in preview!
+      </section>
+
+      <section class="grid" aria-label="payment widgets">
+        <!-- Make/Schedule a Payment -->
+        <article class="card span-8" aria-labelledby="composerHeading">
+          <h2 id="composerHeading">Make a Payment</h2>
+          <p>Create a payment in any currency. We convert to your account currency using the free <a href="https://www.frankfurter.app/" target="_blank" rel="noopener">Frankfurter API</a> (ECB FX data).</p>
+          <div class="controls">
+            <div class="row">
+              <div class="field">
+                <label for="payee">Payee</label>
+                <input id="payee" type="text" placeholder="Acme Utilities" aria-describedby="payeeHint" />
+                <div id="payeeHint" class="sr-only">Name of recipient</div>
+              </div>
+              <div class="field">
+                <label for="category">Category</label>
+                <select id="category">
+                  <option>Utilities</option>
+                  <option>Rent</option>
+                  <option>Salary</option>
+                  <option>Supplies</option>
+                  <option>Travel</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="amount">Amount</label>
+                <input id="amount" type="number" inputmode="decimal" placeholder="100.00" value="100" aria-describedby="amountHint" />
+                <div id="amountHint" class="sr-only">Enter an amount</div>
+              </div>
+              <div class="field">
+                <label for="currency">Currency</label>
+                <select id="currency"></select>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="date">Payment date</label>
+                <input id="date" type="date" />
+              </div>
+              <div class="field">
+                <label for="method">Method</label>
+                <select id="method">
+                  <option>Bank Transfer</option>
+                  <option>Card</option>
+                  <option>Direct Debit</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn" id="payNowBtn" aria-label="Pay now">Pay Now</button>
+              <button class="btn-ghost" id="scheduleBtn" aria-label="Schedule payment">Schedule</button>
+            </div>
+          </div>
+          <div class="legend" id="fxPreview" aria-live="polite"></div>
+          <div id="apiStatus" class="status" role="status" aria-live="polite"></div>
+        </article>
+
+        <!-- Account & Insights -->
+        <article class="card span-4" aria-labelledby="accountHeading">
+          <h2 id="accountHeading">Account & Insights</h2>
+          <div class="controls">
+            <div class="field">
+              <label for="accountCurrency">Account currency</label>
+              <select id="accountCurrency"></select>
+            </div>
+          </div>
+          <div class="legend" id="insights"></div>
+          <svg class="sparkline" viewBox="0 0 600 140" role="img" aria-labelledby="sparkTitle sparkDesc" id="spark">
+            <title id="sparkTitle">Paid last 7 days</title>
+            <desc id="sparkDesc">A sparkline showing total paid amounts over the last 7 days.</desc>
+          </svg>
+        </article>
+      </section>
+
+      <!-- Ledger -->
+      <section class="card" aria-labelledby="ledgerHeading">
+        <h2 id="ledgerHeading">Payments Ledger</h2>
+        <div class="controls" style="margin-bottom: 8px;">
+          <div class="row">
+            <div class="field">
+              <label for="statusFilter">Status</label>
+              <select id="statusFilter">
+                <option value="all">All</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Paid">Paid</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="search">Search payee</label>
+              <input id="search" type="text" placeholder="Search by payee…" />
+            </div>
+          </div>
+        </div>
+        <div class="legend" id="ledgerSummary"></div>
+        <div style="overflow:auto; max-height: 420px; border-radius: var(--radius);">
+          <table role="table" aria-describedby="ledgerHeading">
+            <thead>
+              <tr role="row">
+                <th scope="col">Date</th>
+                <th scope="col">Payee</th>
+                <th scope="col">Category</th>
+                <th scope="col">Amount</th>
+                <th scope="col">In Account</th>
+                <th scope="col">Status</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Market clocks (kept minimal) -->
+      <section class="card" aria-labelledby="clocksHeading">
+        <h2 id="clocksHeading">Global Market Clocks</h2>
+        <p>Local time in major markets (updates every minute).</p>
+        <div class="grid">
+          <div class="card span-3" id="clock-ny" aria-live="polite">New York: <strong>--:--</strong></div>
+          <div class="card span-3" id="clock-lon" aria-live="polite">London: <strong>--:--</strong></div>
+          <div class="card span-3" id="clock-tok" aria-live="polite">Tokyo: <strong>--:--</strong></div>
+          <div class="card span-3" id="clock-syd" aria-live="polite">Sydney: <strong>--:--</strong></div>
+        </div>
+      </section>
+    </main>
+
+    <footer role="contentinfo">
+      <p><strong>Demo‑only.</strong> FX rates via European Central Bank (Frankfurter). Data may be delayed; do not use for trading or advice. Payments are simulated locally in your browser.</p>
+    </footer>
+  </div>
+
+  <script>
+    // =============================================================
+    // EchoLogicFinance — Payments, Vanilla JS
+    // =============================================================
+
+    // ===== EASY DEMO KNOBS =======================================
+    const SETTINGS = {
+      TAGLINE: "A payment services application demo.",
+      VERSION: "v2.0.0",
+      SHOW_PROMO: false,          // flip to true for a big banner
+      ACCOUNT_CCY: "GBP"         // default account currency
+    };
+
+    // ===== Utilities =============================================
+    const $ = (sel) => document.querySelector(sel);
+    const fmt = (n, ccy) => new Intl.NumberFormat(undefined, { style: 'currency', currency: ccy || state.account }).format(Number(n) || 0);
+    function setStatus(msg, mode = 'ok') { const box = $('#apiStatus'); box.textContent = msg; box.className = `status ${mode}`; }
+    function ymd(d) { const pad = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+
+    // Accessible SVG sparkline generator
+    function drawSparkline(svg, values) {
+      const W = 600, H = 140, P = 12;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (!values || values.length < 2) return;
+      const min = Math.min(...values), max = Math.max(...values);
+      const span = max - min || 1; const step = (W - P * 2) / (values.length - 1);
+      const points = values.map((v,i)=>[P+i*step, H-P-((v-min)/span)*(H-P*2)]);
+      const d = points.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+      const grid = document.createElementNS('http://www.w3.org/2000/svg','line');
+      grid.setAttribute('x1', P); grid.setAttribute('x2', W-P); grid.setAttribute('y1', H-P); grid.setAttribute('y2', H-P);
+      grid.setAttribute('stroke', 'rgba(255,255,255,0.25)'); grid.setAttribute('stroke-width','1'); svg.appendChild(grid);
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', d); path.setAttribute('fill','none');
+      path.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2563eb');
+      path.setAttribute('stroke-width','3'); path.setAttribute('stroke-linecap','round'); svg.appendChild(path);
+      const last = points[points.length-1]; const dot = document.createElementNS('http://www.w3.org/200.svg','circle');
+    }
+  </script>
+  <script>
+    // ===== Sparkline last point (fix split due to single-file length) =====
+    (function(){
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const oldDraw = window.drawSparkline;
+      window.drawSparkline = function(svg, values){
+        oldDraw(svg, values);
+        if (!values || values.length < 2) return;
+        const W = 600, H = 140, P = 12;
+        const min = Math.min(...values), max = Math.max(...values);
+        const span = max - min || 1; const step = (W - P * 2) / (values.length - 1);
+        const points = values.map((v,i)=>[P+i*step, H-P-((v-min)/span)*(H-P*2)]);
+        const last = points[points.length-1];
+        const dot = document.createElementNS(svgNS,'circle');
+        dot.setAttribute('cx', last[0]); dot.setAttribute('cy', last[1]); dot.setAttribute('r','4');
+        dot.setAttribute('fill','#fff');
+        dot.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2563eb');
+        dot.setAttribute('stroke-width','3');
+        svg.appendChild(dot);
+      }
+    })();
+  </script>
+  <script>
+    // ===== FX API (Frankfurter) =================================
+    const API = {
+      base: 'https://api.frankfurter.app',
+      async currencies() { const res = await fetch(`${this.base}/currencies`); if (!res.ok) throw new Error('Currencies request failed'); return res.json(); },
+      async rate(from, to) { if (from === to) return 1; const res = await fetch(`${this.base}/latest?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`); if (!res.ok) throw new Error('Rate request failed'); const j = await res.json(); return j.rates[to]; }
+    };
+
+    // ===== App state ============================================
+    const state = {
+      account: SETTINGS.ACCOUNT_CCY,
+      currencies: {},
+      payments: [] // {id, date, payee, category, amount, currency, method, status, createdAt, executedAt, rate, inAccount}
+    };
+
+    function save() { localStorage.setItem('elf_payments', JSON.stringify(state.payments)); }
+    function load() { try { state.payments = JSON.parse(localStorage.getItem('elf_payments')||'[]'); } catch { state.payments = []; } }
+
+    // ===== Init currencies ======================================
+    async function initCurrencies() {
+      try {
+        setStatus('Loading currencies…');
+        state.currencies = await API.currencies();
+        const entries = Object.entries(state.currencies).sort((a,b)=>a[0].localeCompare(b[0]));
+        const curSel = $('#currency'); const acctSel = $('#accountCurrency');
+        const opts = entries.map(([code,name])=>`<option value="${code}">${code} — ${name}</option>`).join('');
+        curSel.innerHTML = opts; acctSel.innerHTML = opts;
+        curSel.value = 'GBP'; // sensible default
+        acctSel.value = state.account;
+        $('#acctBadge').textContent = `Account: ${state.account}`;
+        setStatus('Currencies loaded.', 'ok');
+        updateFxPreview();
+      } catch (e) {
+        console.error(e);
+        setStatus('Could not load currencies. Using fallback list.', 'warn');
+        const fallback = [['USD','US Dollar'],['EUR','Euro'],['GBP','British Pound']];
+        const curSel = $('#currency'); const acctSel = $('#accountCurrency');
+        const opts = fallback.map(([code,name])=>`<option value="${code}">${code} — ${name}</option>`).join('');
+        curSel.innerHTML = opts; acctSel.innerHTML = opts; curSel.value = 'GBP'; acctSel.value = state.account;
+      }
+    }
+
+    // ===== FX Preview ===========================================
+    async function updateFxPreview() {
+      const amt = Number($('#amount').value || 0);
+      const from = $('#currency').value; const to = state.account;
+      try { const r = await API.rate(from, to); $('#fxPreview').innerHTML = `<span class="pill">1 ${from} = ${r.toFixed(6)} ${to}</span> <span class="pill">${fmt(amt, from)} ≈ ${fmt(amt*r, to)}</span>`; }
+      catch { $('#fxPreview').innerHTML = `<span class="pill">FX preview unavailable</span>`; }
+    }
+
+    // ===== Compose payment ======================================
+    function readForm() {
+      return {
+        date: $('#date').value || ymd(new Date()),
+        payee: ($('#payee').value || '').trim(),
+        category: $('#category').value,
+        amount: Number($('#amount').value || 0),
+        currency: $('#currency').value,
+        method: $('#method').value
+      };
+    }
+
+    async function createPayment(status) {
+      const p = readForm(); if (!p.payee || !p.amount) { setStatus('Enter a payee and amount.', 'warn'); return; }
+      try {
+        setStatus('Calculating FX…');
+        const r = await API.rate(p.currency, state.account);
+        const payment = {
+          id: Math.random().toString(36).slice(2),
+          ...p,
+          status,
+          createdAt: new Date().toISOString(),
+          executedAt: status === 'Paid' ? new Date().toISOString() : null,
+          rate: r,
+          inAccount: p.amount * r
+        };
+        state.payments.unshift(payment); save();
+        setStatus(status === 'Paid' ? 'Payment completed ✓' : 'Payment scheduled ✓', 'ok');
+        render();
+      } catch (e) {
+        console.error(e); setStatus('FX/API error. Try again.', 'err');
+      }
+    }
+
+    // ===== Ledger render & actions ===============================
+    function matchesFilters(p) {
+      const s = $('#statusFilter').value; const q = ($('#search').value||'').toLowerCase();
+      const statusOk = (s==='all') || p.status === s;
+      const searchOk = !q || p.payee.toLowerCase().includes(q);
+      return statusOk && searchOk;
+    }
+
+    function renderLedger() {
+      const body = $('#ledgerBody'); body.innerHTML = '';
+      const rows = state.payments.filter(matchesFilters);
+      for (const p of rows) {
+        const tr = document.createElement('tr');
+        const statusClass = `status-${p.status.toLowerCase()}`;
+        tr.innerHTML = `
+          <td>${p.date}</td>
+          <td>${escapeHtml(p.payee)}</td>
+          <td>${escapeHtml(p.category)}</td>
+          <td>${fmt(p.amount, p.currency)} <span class="pill">${p.currency}</span></td>
+          <td>${fmt(p.inAccount, state.account)} <span class="pill">${state.account}</span></td>
+          <td><span class="badge ${statusClass}">${p.status}</span></td>
+          <td>
+            ${p.status==='Scheduled' ? `<button class=\"btn\" data-action=\"pay\" data-id=\"${p.id}\">Mark Paid</button>`: ''}
+            ${p.status!=='Cancelled' && p.status!=='Paid' ? ` <button class=\"btn-danger\" data-action=\"cancel\" data-id=\"${p.id}\">Cancel</button>`: ''}
+          </td>`;
+        body.appendChild(tr);
+      }
+      body.querySelectorAll('button').forEach(btn=>btn.addEventListener('click', onRowAction));
+
+      // Summary
+      const month = new Date().toISOString().slice(0,7);
+      let paidMonth = 0, scheduled = 0;
+      for (const p of state.payments) {
+        if (p.status==='Paid' && p.executedAt && p.executedAt.slice(0,7)===month) paidMonth += p.inAccount;
+        if (p.status==='Scheduled') scheduled += p.inAccount;
+      }
+      $('#ledgerSummary').innerHTML = `
+        <span class="pill">Paid this month: <strong>${fmt(paidMonth, state.account)}</strong></span>
+        <span class="pill">Scheduled: <strong>${fmt(scheduled, state.account)}</strong></span>
+        <span class="pill">Count: ${rows.length}</span>
+      `;
+    }
+
+    function onRowAction(e) {
+      const id = e.target.getAttribute('data-id'); const action = e.target.getAttribute('data-action');
+      const p = state.payments.find(x=>x.id===id); if (!p) return;
+      if (action==='pay') { p.status='Paid'; p.executedAt=new Date().toISOString(); }
+      if (action==='cancel') { p.status='Cancelled'; }
+      save(); render();
+    }
+
+    function escapeHtml(s) { return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+    // ===== Insights & sparkline =================================
+    function renderInsights() {
+      const today = new Date(); const days = [...Array(7)].map((_,i)=>{ const d=new Date(); d.setDate(today.getDate() - (6-i)); return ymd(d);});
+      const totals = days.map(d=> state.payments.filter(p=>p.status==='Paid' && (p.executedAt||'').slice(0,10)===d).reduce((a,b)=>a+b.inAccount,0));
+      drawSparkline($('#spark'), totals);
+      const totalPaid = state.payments.filter(p=>p.status==='Paid').reduce((a,b)=>a+b.inAccount,0);
+      $('#insights').innerHTML = `
+        <span class="pill">Total paid: <strong>${fmt(totalPaid)}</strong></span>
+        <span class="pill">Base currency: <strong>${state.account}</strong></span>
+      `;
+    }
+
+    // ===== Market clocks ========================================
+    function tzTime(offsetMinutes) { const now=new Date(); const localOffset=now.getTimezoneOffset(); const target=new Date(now.getTime() + (offsetMinutes + localOffset) * 60 * 1000); return target.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+    function updateClocks() { $('#clock-ny').innerHTML = `New York: <strong>${tzTime(-4*60)}</strong>`; $('#clock-lon').innerHTML = `London: <strong>${tzTime(0)}</strong>`; $('#clock-tok').innerHTML = `Tokyo: <strong>${tzTime(9*60)}</strong>`; $('#clock-syd').innerHTML = `Sydney: <strong>${tzTime(10*60)}</strong>`; }
+
+    // ===== Render all ===========================================
+    function render() { renderLedger(); renderInsights(); }
+
+    // ===== Init ==================================================
+    function applyDemoKnobs() {
+      $('#appTagline').textContent = SETTINGS.TAGLINE; $('#versionBadge').textContent = SETTINGS.VERSION; if (SETTINGS.SHOW_PROMO) { $('#promoBanner').style.display = 'block'; }
+    }
+
+    async function start() {
+      applyDemoKnobs(); load();
+      $('#date').value = ymd(new Date());
+      $('#payNowBtn').addEventListener('click', ()=>createPayment('Paid'));
+      $('#scheduleBtn').addEventListener('click', ()=>createPayment('Scheduled'));
+      ['amount','currency'].forEach(id=>$('#'+id).addEventListener('input', updateFxPreview));
+      $('#statusFilter').addEventListener('change', render);
+      $('#search').addEventListener('input', render);
+      $('#accountCurrency').addEventListener('change', async (e)=>{ state.account = e.target.value; $('#acctBadge').textContent = `Account: ${state.account}`; await updateFxPreview(); render(); });
+
+      await initCurrencies();
+      await updateFxPreview();
+      render();
+      updateClocks(); setInterval(updateClocks, 60*1000);
+    }
+
+    start();
+  </script>
+</body>
+</html>
